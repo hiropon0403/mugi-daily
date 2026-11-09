@@ -228,12 +228,14 @@ async function showTapPage(theme) {
   .stamp { margin-top:6px; color:#ccc; font-size:12px; }
   .na { padding:28px 0; color:#f87171; }
 </style></head><body><div class="shade">
-${movieB64 ? `<a href="hatch://"><video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video></a><div class="hint">ムービーをタップすると Muse が開きます</div>` : ""}
+${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video><div class="hint">このページを閉じると Muse が開きます</div>` : ""}
   ${priceHtml}
   ${themeText ? `<div class="theme">${themeText}</div>` : ""}
   <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
 </div></body></html>`;
   await WebView.loadHTML(html, null, null, true);
+  // ページを閉じたら Muse を開く（Scriptable の画面内タップではアプリを直接開けないため）
+  Safari.open("https://muse.ai/");
 }
 
 const widget = await buildWidget();
