@@ -223,10 +223,12 @@ async function showTapPage(theme) {
   .price { font-size:52px; font-weight:800; line-height:1.15; }
   .sub { color:#ddd; font-size:13px; }
   .theme { margin-top:12px; font-size:14px; color:#ffd9ec; }
+  .hint { margin-top:6px; font-size:12px; color:#bbb; }
+  a { -webkit-tap-highlight-color: transparent; }
   .stamp { margin-top:6px; color:#ccc; font-size:12px; }
   .na { padding:28px 0; color:#f87171; }
 </style></head><body><div class="shade">
-${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video>` : ""}
+${movieB64 ? `<a href="https://muse.ai/"><video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video></a><div class="hint">ムービーをタップすると Muse が開きます</div>` : ""}
   ${priceHtml}
   ${themeText ? `<div class="theme">${themeText}</div>` : ""}
   <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
