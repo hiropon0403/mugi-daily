@@ -93,7 +93,7 @@ function composeImage(bgImg, poseImg, rate, up) {
     ctx.fillRect(new Rect(0, 0, S, S));
   }
   if (poseImg) {
-    ctx.drawImageInRect(poseImg, new Rect(98, 92, 242, 242));
+    ctx.drawImageInRect(poseImg, new Rect(58, 38, 288, 288));
   }
   if (rate) {
     drawChartIn(ctx, rate.closes, up, new Rect(10, 252, 150, 62));
@@ -189,10 +189,9 @@ async function buildWidget() {
 
 // ---- タップ時の全画面ページ（背景つき・ムービー + 現在値） ----
 async function showTapPage(theme) {
-  const [rate, movieB64, bgB64] = await Promise.all([
+  const [rate, movieB64] = await Promise.all([
     fetchRate().catch(() => null),
     fetchB64Text("movie.b64"),
-    fetchB64Text("bg.b64"),
   ]);
 
   let priceHtml = "<div class='na'>レートを取得できませんでした</div>";
@@ -215,10 +214,8 @@ async function showTapPage(theme) {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body { margin:0; color:#fff; font-family:-apple-system, sans-serif; text-align:center; min-height:100vh;
-    ${bgB64 ? `background-image:url("data:image/jpeg;base64,${bgB64}"); background-size:cover; background-position:center;` : "background:#111;"}
-  }
-  .shade { background:rgba(0,0,0,0.38); min-height:100vh; padding:18px 14px 26px; box-sizing:border-box; }
+  body { margin:0; background:#1a1512; color:#fff; font-family:-apple-system, sans-serif; text-align:center; min-height:100vh; }
+  .shade { min-height:100vh; padding:18px 14px 26px; box-sizing:border-box; }
   video { width:92%; max-height:58vh; object-fit:contain; background:#000; display:block; margin:6px auto 0;
     border-radius:18px; box-shadow:0 8px 30px rgba(0,0,0,0.45); }
   .pair { margin-top:16px; font-size:17px; font-weight:700; letter-spacing:.05em; }
