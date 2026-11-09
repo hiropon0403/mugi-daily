@@ -224,7 +224,7 @@ ${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,
   <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
 </div>
 </body></html>`;
-  await WebView.loadHTML(html, null, true);
+  await WebView.loadHTML(html, null, null, true);
 }
 
 const widget = await buildWidget();
