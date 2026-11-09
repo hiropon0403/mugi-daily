@@ -1,4 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable)
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v2
+// むーちゃんの画像を画面いっぱいに敷き、手前にレートとグラフを合成する
 // 画像とテーマ: GitHub hiropon0403/mugi-daily（毎朝5時に むーちゃん が更新）
 // レート: Yahoo Finance 公開チャートAPIから iPhone 自身が取得
 // 注意: ウィジェットの更新間隔は iOS が決めます（目安15分〜1時間）
@@ -46,31 +47,47 @@ async function fetchRate() {
 }
 
 function drawChart(closes, up) {
-  const w = 300, h = 64;
+  const w = 320, h = 80;
   const ctx = new DrawContext();
   ctx.size = new Size(w, h);
   ctx.opaque = false;
-  ctx.setStrokeColor(up ? Color.green() : Color.red());
-  ctx.setLineWidth(3);
-  if (closes.length < 2) return ctx.getImage();
+  // 塗りつぶし（半透明）
   const min = Math.min(...closes), max = Math.max(...closes);
   const span = max - min || 1;
-  const path = new Path();
-  closes.forEach((v, i) => {
-    const x = (i / (closes.length - 1)) * (w - 8) + 4;
-    const y = h - 6 - ((v - min) / span) * (h - 12);
-    if (i === 0) path.move(new Point(x, y));
-    else path.addLine(new Point(x, y));
-  });
-  ctx.addPath(path);
+  const pts = closes.map((v, i) => new Point(
+    (i / (closes.length - 1)) * (w - 10) + 5,
+    h - 8 - ((v - min) / span) * (h - 16)
+  ));
+  const fill = new Path();
+  fill.move(pts[0]);
+  pts.forEach((p) => fill.addLine(p));
+  fill.addLine(new Point(pts[pts.length - 1].x, h));
+  fill.addLine(new Point(pts[0].x, h));
+  fill.closeSubpath();
+  ctx.addPath(fill);
+  ctx.setFillColor(new Color(up ? "#22c55e" : "#ef4444", 0.30));
+  ctx.fillPath();
+  // 線
+  const line = new Path();
+  line.move(pts[0]);
+  pts.forEach((p) => line.addLine(p));
+  ctx.addPath(line);
+  ctx.setStrokeColor(up ? Color.green() : Color.red());
+  ctx.setLineWidth(3);
   ctx.strokePath();
   return ctx.getImage();
 }
 
+function panel(stack, alpha) {
+  stack.backgroundColor = new Color("#000000", alpha);
+  stack.cornerRadius = 8;
+  stack.setPadding(5, 8, 5, 8);
+  return stack;
+}
+
 async function buildWidget() {
   const widget = new ListWidget();
-  widget.backgroundColor = Color.dynamic(Color.white(), Color.black());
-  widget.setPadding(10, 12, 10, 12);
+  widget.setPadding(8, 8, 8, 8);
 
   const [theme, mugiImg, rate] = await Promise.all([
     fetchTheme(),
@@ -78,24 +95,23 @@ async function buildWidget() {
     fetchRate().catch(() => null),
   ]);
 
-  // 上段: むーちゃん + 通貨ペア名 + 変化率
-  const top = widget.addStack();
-  top.layoutHorizontally();
-  top.centerAlignContent();
-
+  // 背景いっぱいに むーちゃん
   if (mugiImg) {
-    const im = top.addImage(mugiImg);
-    im.imageSize = new Size(52, 52);
-    im.cornerRadius = 10;
-    top.addSpacer(8);
+    widget.backgroundImage = mugiImg;
+  } else {
+    widget.backgroundColor = Color.dynamic(Color.white(), Color.black());
   }
 
-  const head = top.addStack();
-  head.layoutVertically();
-  const pairRow = head.addStack();
+  // 上部パネル: ペア名 + 変化率 + レート
+  const headBox = widget.addStack();
+  headBox.layoutVertically();
+  panel(headBox, 0.45);
+
+  const pairRow = headBox.addStack();
   pairRow.layoutHorizontally();
   const pair = pairRow.addText(LABEL);
-  pair.font = Font.boldSystemFont(13);
+  pair.font = Font.boldSystemFont(12);
+  pair.textColor = Color.white();
   pairRow.addSpacer(6);
 
   let up = true;
@@ -105,31 +121,32 @@ async function buildWidget() {
     const pct = (diff / rate.prev) * 100;
     const chg = pairRow.addText(`${up ? "+" : ""}${pct.toFixed(2)}%`);
     chg.font = Font.boldSystemFont(12);
-    chg.textColor = up ? Color.green() : Color.red();
+    chg.textColor = up ? new Color("#4ade80", 1) : new Color("#f87171", 1);
 
-    const price = head.addText(rate.price.toFixed(2));
-    price.font = Font.boldSystemFont(26);
+    const price = headBox.addText(rate.price.toFixed(2));
+    price.font = Font.boldSystemFont(24);
+    price.textColor = Color.white();
   } else {
-    const na = head.addText("取得失敗");
-    na.font = Font.systemFont(13);
-    na.textColor = Color.gray();
-  }
-
-  widget.addSpacer(4);
-
-  // 中段: ミニチャート
-  if (rate && rate.closes.length > 1) {
-    const chart = widget.addImage(drawChart(rate.closes, up));
-    chart.imageSize = new Size(150, 32);
+    const na = headBox.addText("取得失敗");
+    na.font = Font.systemFont(12);
+    na.textColor = Color.white();
   }
 
   widget.addSpacer();
 
-  // 下段: 今日のテーマ
+  // 下部: グラフ（手前に合成）+ テーマ
+  if (rate && rate.closes.length > 1) {
+    const chart = widget.addImage(drawChart(rate.closes, up));
+    chart.imageSize = new Size(152, 38);
+    widget.addSpacer(3);
+  }
+
   if (theme && theme.anniversary) {
-    const t = widget.addText(`今日は${theme.anniversary}の日`);
+    const footBox = widget.addStack();
+    panel(footBox, 0.45);
+    const t = footBox.addText(`今日は${theme.anniversary}の日`);
     t.font = Font.systemFont(10);
-    t.textColor = Color.gray();
+    t.textColor = Color.white();
     t.lineLimit = 1;
   }
 
