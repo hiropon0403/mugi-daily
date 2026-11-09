@@ -1,5 +1,6 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v4
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v5
 // 読み込みのたびに むーちゃんのポーズがランダムに変わる
+// タップすると、その日の むーちゃんムービーと AUD/JPY の現在値を全画面表示する
 // その日のテーマ背景を画面いっぱいに敷き、むーちゃんを手前に重ね、
 // さらに手前にレートとグラフを合成する
 // 画像とテーマ: GitHub hiropon0403/mugi-daily（毎朝5時に むーちゃん が更新）
@@ -176,10 +177,61 @@ async function buildWidget() {
   return widget;
 }
 
+// ---- タップ時の全画面ページ（ムービー + 現在値） ----
+async function showTapPage(theme) {
+  const rate = await fetchRate().catch(() => null);
+  let movieB64 = "";
+  try {
+    const req = new Request(`${RAW}/movie.b64?d=${todayStr()}`);
+    movieB64 = (await req.loadString()).trim();
+  } catch (e) {}
+
+  let priceHtml = "<div class='na'>レートを取得できませんでした</div>";
+  if (rate) {
+    const diff = rate.price - rate.prev;
+    const up = diff >= 0;
+    const pct = (diff / rate.prev) * 100;
+    priceHtml = `
+      <div class="pair">AUD/JPY <span class="${up ? "up" : "down"}">${up ? "+" : ""}${pct.toFixed(2)}%</span></div>
+      <div class="price">${rate.price.toFixed(3)}</div>
+      <div class="sub">前日終値 ${rate.prev.toFixed(3)} / 差 ${up ? "+" : ""}${diff.toFixed(3)}</div>`;
+  }
+  const themeText = theme && theme.anniversary
+    ? `今日は${theme.anniversary}の日${theme.design ? `（${theme.design}）` : ""}`
+    : "";
+  const now = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}/${p(now.getMonth() + 1)}/${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { margin:0; background:#111; color:#fff; font-family:-apple-system, sans-serif; text-align:center; }
+  video { width:100%; max-height:62vh; object-fit:contain; background:#000; display:block; }
+  .wrap { padding:14px 16px 24px; }
+  .pair { font-size:17px; font-weight:700; letter-spacing:.05em; }
+  .up { color:#4ade80; } .down { color:#f87171; }
+  .price { font-size:52px; font-weight:800; line-height:1.15; }
+  .sub { color:#aaa; font-size:13px; }
+  .theme { margin-top:12px; font-size:14px; color:#ffd9ec; }
+  .stamp { margin-top:6px; color:#888; font-size:12px; }
+  .na { padding:28px 0; color:#f87171; }
+</style></head><body>
+${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video>` : ""}
+<div class="wrap">
+  ${priceHtml}
+  ${themeText ? `<div class="theme">${themeText}</div>` : ""}
+  <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
+</div>
+</body></html>`;
+  await WebView.loadHTML(html, null, true);
+}
+
 const widget = await buildWidget();
 if (config.runsInWidget) {
   Script.setWidget(widget);
 } else {
-  await widget.presentSmall();
+  const theme = await fetchJSONFile("today.json");
+  await showTapPage(theme);
 }
 Script.complete();
