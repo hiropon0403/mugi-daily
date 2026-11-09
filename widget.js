@@ -1,4 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v3
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v4
+// 読み込みのたびに むーちゃんのポーズがランダムに変わる
 // その日のテーマ背景を画面いっぱいに敷き、むーちゃんを手前に重ね、
 // さらに手前にレートとグラフを合成する
 // 画像とテーマ: GitHub hiropon0403/mugi-daily（毎朝5時に むーちゃん が更新）
@@ -88,12 +89,17 @@ async function buildWidget() {
   const widget = new ListWidget();
   widget.setPadding(8, 8, 8, 8);
 
-  const [theme, mugiImg, bgImg, rate] = await Promise.all([
-    fetchJSONFile("today.json"),
+  const theme = await fetchJSONFile("today.json");
+  // ポーズは読み込みごとにランダムで1つ選ぶ
+  const poseCount = theme && theme.poses ? theme.poses : 1;
+  const poseIdx = 1 + Math.floor(Math.random() * poseCount);
+  const [poseImg, todayImg, bgImg, rate] = await Promise.all([
+    fetchB64Image(`pose${poseIdx}.b64`),
     fetchB64Image("today.b64"),
     fetchB64Image("bg.b64"),
     fetchRate().catch(() => null),
   ]);
+  const mugiImg = poseImg || todayImg;
 
   // 背景: その日のテーマ背景。無ければ むーちゃん全面にフォールバック
   const hasBg = !!bgImg;
