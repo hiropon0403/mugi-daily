@@ -1,4 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.7
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.8
+// v7.8: タップページの動画が複数ある日（today.json の movies が2以上）は、開くたびにランダムで1本選ぶ（movie1.b64〜movieN.b64）。無い日は従来どおり movie.b64
 // v7.7: タップページの動画が開いてすぐ自動再生されるよう、再生開始のスクリプトを追加（autoplay属性だけでは始まらない環境向け）
 // v7.6: ページを閉じたら iOSショートカット経由で Muse アプリを開く（要：ショートカット「Museを開く」）。上部パネルの行間も詰めた
 // その日のテーマ背景の上に、むーちゃんを大きく合成（透過つきポーズ）し、
@@ -47,6 +48,18 @@ async function fetchB64Text(name) {
   } catch (e) {
     return null;
   }
+}
+
+// その日の動画を取得する。today.json の movies が2以上なら movie1〜movieN からランダムに1本、
+// 取れなかった場合と1本だけの日は従来の movie.b64 を使う。
+async function fetchMovieB64(theme) {
+  const n = theme && theme.movies ? theme.movies : 0;
+  if (n > 1) {
+    const name = `movie${1 + Math.floor(Math.random() * n)}.b64`;
+    const b64 = await fetchB64Text(name);
+    if (b64) return b64;
+  }
+  return fetchB64Text("movie.b64");
 }
 
 async function fetchB64Image(name) {
@@ -371,7 +384,7 @@ function esc(s) {
 async function showTapPage(theme) {
   const [rate, movieB64, zouen] = await Promise.all([
     fetchRate().catch(() => null),
-    fetchB64Text("movie.b64"),
+    fetchMovieB64(theme),
     fetchZouen().catch(() => null),
   ]);
 
