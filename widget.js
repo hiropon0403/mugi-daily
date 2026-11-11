@@ -1,4 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.6
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.7
+// v7.7: タップページの動画が開いてすぐ自動再生されるよう、再生開始のスクリプトを追加（autoplay属性だけでは始まらない環境向け）
 // v7.6: ページを閉じたら iOSショートカット経由で Muse アプリを開く（要：ショートカット「Museを開く」）。上部パネルの行間も詰めた
 // その日のテーマ背景の上に、むーちゃんを大きく合成（透過つきポーズ）し、
 // さらに手前にレートとグラフを重ねる。読み込みごとにポーズがランダムに変わる。
@@ -467,7 +468,7 @@ async function showTapPage(theme) {
   .result .ng { color:#dc2626; font-weight:800; font-size:17px; }
   .result .expl { margin-top:6px; color:#44403c; }
 </style></head><body><div class="shade">
-${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video><div class="hint">このページを閉じると Muse アプリが開きます</div>` : ""}
+${movieB64 ? `<video autoplay muted loop playsinline preload="auto" src="data:video/mp4;base64,${movieB64}"></video><script>(function(){var v=document.querySelector('video');if(!v)return;function p(){var r=v.play();if(r&&r.catch)r.catch(function(){});}v.addEventListener('canplay',p);window.addEventListener('load',p);document.addEventListener('touchstart',p,{once:true});p();})();</script><div class="hint">このページを閉じると Muse アプリが開きます</div>` : ""}
   ${priceHtml}
   ${themeText ? `<div class="theme">${themeText}</div>` : ""}
   <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
