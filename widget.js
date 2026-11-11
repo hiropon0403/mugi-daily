@@ -1,5 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.4
-// v7.4: 造園の暗記ひとことと問題は、読み込みのたびにその日の複数問からランダムで変わる
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.5
+// v7.5: 実機で文字が省略されないよう上部を1パネルに統合し、各文字を収まる大きさへ調整。タップページの問題は画面下へ移動
 // その日のテーマ背景の上に、むーちゃんを大きく合成（透過つきポーズ）し、
 // さらに手前にレートとグラフを重ねる。読み込みごとにポーズがランダムに変わる。
 // v7: 右上に今日の天気（Open-Meteo、佐賀固定）、下部に造園1級の暗記ひとことを表示。
@@ -172,6 +172,13 @@ function composeMediumImage(bgImg, poseImg) {
   return ctx.getImage();
 }
 
+
+function themeLabel(theme) {
+  if (!theme || !theme.anniversary) return "";
+  const a = theme.anniversary;
+  return a.endsWith("日") ? `今日は${a}` : `今日は${a}の日`;
+}
+
 function panel(stack, alpha) {
   stack.backgroundColor = new Color("#000000", alpha);
   stack.cornerRadius = 8;
@@ -233,7 +240,7 @@ async function buildWidget() {
       mChg.font = Font.boldSystemFont(20);
       mChg.textColor = up ? new Color("#4ade80", 1) : new Color("#f87171", 1);
       const mPrice = mHead.addText(rate.price.toFixed(2));
-      mPrice.font = Font.boldSystemFont(46);
+      mPrice.font = Font.boldSystemFont(40);
       mPrice.textColor = Color.white();
     } else {
       const mNa = mHead.addText("取得失敗");
@@ -248,10 +255,10 @@ async function buildWidget() {
       const mWxTop = mWx.addStack();
       mWxTop.layoutHorizontally();
       const mIcon = mWxTop.addText(weather.icon);
-      mIcon.font = Font.systemFont(30);
+      mIcon.font = Font.systemFont(26);
       mWxTop.addSpacer(4);
       const mTemp = mWxTop.addText(`${weather.temp}°`);
-      mTemp.font = Font.boldSystemFont(30);
+      mTemp.font = Font.boldSystemFont(26);
       mTemp.textColor = Color.white();
       const mSub = mWx.addText(`${weather.max}° / ${weather.min}°${weather.rain != null ? ` ・ ☔${weather.rain}%` : ""}`);
       mSub.font = Font.systemFont(14);
@@ -264,7 +271,7 @@ async function buildWidget() {
       const mFoot = mFootRow.addStack();
       panel(mFoot, 0.45);
       const mh = mFoot.addText(`🌱暗記：${zouen.hitokoto}`);
-      mh.font = Font.boldSystemFont(22);
+      mh.font = Font.boldSystemFont(19);
       mh.textColor = new Color("#fef08a", 1);
       mh.lineLimit = 2;
     }
@@ -273,58 +280,50 @@ async function buildWidget() {
     return widget;
   }
 
-  // 上部: 左にペア名 + 変化率 + レート、右上に天気
-  const topRow = widget.addStack();
-  topRow.layoutHorizontally();
-  const headBox = topRow.addStack();
-  headBox.layoutVertically();
-  panel(headBox, 0.45);
+  // 上部: 1つのパネルに統合（実機で省略されない幅に収める）
+  const topPanel = widget.addStack();
+  topPanel.layoutVertically();
+  panel(topPanel, 0.45);
 
-  const pairRow = headBox.addStack();
-  pairRow.layoutHorizontally();
-  const pair = pairRow.addText(LABEL);
-  pair.font = Font.boldSystemFont(16);
-  pair.textColor = Color.white();
-  pairRow.addSpacer(6);
+  const row1 = topPanel.addStack();
+  row1.layoutHorizontally();
+  const pairT = row1.addText(LABEL);
+  pairT.font = Font.boldSystemFont(12);
+  pairT.textColor = Color.white();
+  row1.addSpacer();
 
+  if (weather) {
+    const wxCol = row1.addStack();
+    wxCol.layoutVertically();
+    const wxLine = wxCol.addStack();
+    wxLine.layoutHorizontally();
+    const wxIc = wxLine.addText(weather.icon);
+    wxIc.font = Font.systemFont(15);
+    wxLine.addSpacer(3);
+    const wxTp = wxLine.addText(`${weather.temp}°`);
+    wxTp.font = Font.boldSystemFont(15);
+    wxTp.textColor = Color.white();
+    const wxSb = wxCol.addText(`${weather.max}°/${weather.min}°${weather.rain != null ? ` ☔${weather.rain}%` : ""}`);
+    wxSb.font = Font.systemFont(9);
+    wxSb.textColor = Color.white();
+  }
+
+  const row2 = topPanel.addStack();
+  row2.layoutHorizontally();
   if (rate) {
+    const priceT = row2.addText(rate.price.toFixed(2));
+    priceT.font = Font.boldSystemFont(26);
+    priceT.textColor = Color.white();
+    row2.addSpacer(6);
     const diff = rate.price - rate.prev;
     const pct = (diff / rate.prev) * 100;
-    const chg = pairRow.addText(`${up ? "+" : ""}${pct.toFixed(2)}%`);
-    chg.font = Font.boldSystemFont(16);
-    chg.textColor = up ? new Color("#4ade80", 1) : new Color("#f87171", 1);
-
-    const price = headBox.addText(rate.price.toFixed(2));
-    price.font = Font.boldSystemFont(38);
-    price.textColor = Color.white();
+    const chgT = row2.addText(`${up ? "+" : ""}${pct.toFixed(2)}%`);
+    chgT.font = Font.boldSystemFont(12);
+    chgT.textColor = up ? new Color("#4ade80", 1) : new Color("#f87171", 1);
   } else {
-    const na = headBox.addText("取得失敗");
+    const na = row2.addText("取得失敗");
     na.font = Font.systemFont(12);
     na.textColor = Color.white();
-  }
-  topRow.addSpacer();
-
-  // 右上: 今日の天気（佐賀）
-  if (weather) {
-    const wxBox = topRow.addStack();
-    wxBox.layoutVertically();
-    panel(wxBox, 0.45);
-    const wxTop = wxBox.addStack();
-    wxTop.layoutHorizontally();
-    const wxIconText = wxTop.addText(weather.icon);
-    wxIconText.font = Font.systemFont(26);
-    wxTop.addSpacer(4);
-    const wxTemp = wxTop.addText(`${weather.temp}°`);
-    wxTemp.font = Font.boldSystemFont(26);
-    wxTemp.textColor = Color.white();
-    const wxSub = wxBox.addText(`${weather.max}° / ${weather.min}°`);
-    wxSub.font = Font.systemFont(12);
-    wxSub.textColor = Color.white();
-    if (weather.rain != null) {
-      const wxRain = wxBox.addText(`☔${weather.rain}%`);
-      wxRain.font = Font.systemFont(12);
-      wxRain.textColor = Color.white();
-    }
   }
 
   widget.addSpacer();
@@ -337,16 +336,16 @@ async function buildWidget() {
     footBox.layoutVertically();
     panel(footBox, zouen ? 0.62 : 0.45);
     if (theme && theme.anniversary) {
-      const t = footBox.addText(`今日は${theme.anniversary}の日`);
-      t.font = Font.systemFont(13);
+      const t = footBox.addText(themeLabel(theme));
+      t.font = Font.systemFont(9);
       t.textColor = Color.white();
       t.lineLimit = 1;
     }
     if (zouen && zouen.hitokoto) {
       const h = footBox.addText(`🌱暗記：${zouen.hitokoto}`);
-      h.font = Font.boldSystemFont(20);
+      h.font = Font.boldSystemFont(15);
       h.textColor = new Color("#fef08a", 1);
-      h.lineLimit = 4;
+      h.lineLimit = 3;
     }
     footRow.addSpacer();
   }
@@ -426,8 +425,9 @@ async function showTapPage(theme) {
       <div class="price">${rate.price.toFixed(3)}</div>
       <div class="sub">前日終値 ${rate.prev.toFixed(3)} / 差 ${up ? "+" : ""}${diff.toFixed(3)}</div>`;
   }
-  const themeText = theme && theme.anniversary
-    ? `今日は${theme.anniversary}の日${theme.design ? `（${theme.design}）` : ""}`
+  const themeBase = themeLabel(theme);
+  const themeText = themeBase
+    ? `${themeBase}${theme.design ? `（${theme.design}）` : ""}`
     : "";
   const now = new Date();
   const p = (n) => String(n).padStart(2, "0");
@@ -449,7 +449,7 @@ async function showTapPage(theme) {
   a { -webkit-tap-highlight-color: transparent; }
   .stamp { margin-top:6px; color:#ccc; font-size:12px; }
   .na { padding:28px 0; color:#f87171; }
-  .quiz { background:#fff8ec; color:#26221c; border-radius:18px; padding:16px 14px 14px; text-align:left;
+  .quiz { margin-top:18px; background:#fff8ec; color:#26221c; border-radius:18px; padding:16px 14px 14px; text-align:left;
     box-shadow:0 8px 30px rgba(0,0,0,0.45); }
   .quiz-head { font-size:18px; font-weight:800; color:#4d7c0f; margin-bottom:8px; }
   .quiz-q { font-size:22px; line-height:1.6; font-weight:600; }
@@ -464,11 +464,11 @@ async function showTapPage(theme) {
   .result .ng { color:#dc2626; font-weight:800; font-size:17px; }
   .result .expl { margin-top:6px; color:#44403c; }
 </style></head><body><div class="shade">
-${quizHtml}
 ${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video><div class="hint">このページを閉じると Muse が開きます</div>` : ""}
   ${priceHtml}
   ${themeText ? `<div class="theme">${themeText}</div>` : ""}
   <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
+${quizHtml}
 </div></body></html>`;
   await WebView.loadHTML(html, null, null, true);
   // ページを閉じたら Muse を開く（Scriptable の画面内タップではアプリを直接開けないため）
