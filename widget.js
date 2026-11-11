@@ -1,5 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.5
-// v7.5: 実機で文字が省略されないよう上部を1パネルに統合し、各文字を収まる大きさへ調整。タップページの問題は画面下へ移動
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.6
+// v7.6: ページを閉じたら iOSショートカット経由で Muse アプリを開く（要：ショートカット「Museを開く」）。上部パネルの行間も詰めた
 // その日のテーマ背景の上に、むーちゃんを大きく合成（透過つきポーズ）し、
 // さらに手前にレートとグラフを重ねる。読み込みごとにポーズがランダムに変わる。
 // v7: 右上に今日の天気（Open-Meteo、佐賀固定）、下部に造園1級の暗記ひとことを表示。
@@ -14,6 +14,7 @@ const RAW = "https://raw.githubusercontent.com/hiropon0403/mugi-daily/main";
 const SYMBOL = "AUDJPY=X";
 const LABEL = "AUD/JPY";
 // 天気は佐賀市固定（Open-Meteo、APIキー不要）
+const SHORTCUT_NAME = "Museを開く";
 const WX_LAT = 33.2635;
 const WX_LON = 130.3009;
 
@@ -284,6 +285,8 @@ async function buildWidget() {
   const topPanel = widget.addStack();
   topPanel.layoutVertically();
   panel(topPanel, 0.45);
+  topPanel.spacing = 0;
+  topPanel.setPadding(3, 8, 3, 8);
 
   const row1 = topPanel.addStack();
   row1.layoutHorizontally();
@@ -464,15 +467,16 @@ async function showTapPage(theme) {
   .result .ng { color:#dc2626; font-weight:800; font-size:17px; }
   .result .expl { margin-top:6px; color:#44403c; }
 </style></head><body><div class="shade">
-${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video><div class="hint">このページを閉じると Muse が開きます</div>` : ""}
+${movieB64 ? `<video autoplay muted loop playsinline src="data:video/mp4;base64,${movieB64}"></video><div class="hint">このページを閉じると Muse アプリが開きます</div>` : ""}
   ${priceHtml}
   ${themeText ? `<div class="theme">${themeText}</div>` : ""}
   <div class="stamp">価格は開いた時点の現在値です（${stamp}）</div>
 ${quizHtml}
 </div></body></html>`;
   await WebView.loadHTML(html, null, null, true);
-  // ページを閉じたら Muse を開く（Scriptable の画面内タップではアプリを直接開けないため）
-  Safari.open("https://muse.ai/");
+  // ページを閉じたら、iOSショートカット「Museを開く」経由で Muse アプリを開く
+  // （muse.ai のWebリンクだとブラウザ版が開くため、2026-11-11にひろくんが方式Aを選択）
+  Safari.open(`shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`);
 }
 
 const widget = await buildWidget();
