@@ -1,5 +1,5 @@
-// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.3
-// v7.3: 小サイズのまま文字を限界まで拡大。特に暗記ひとことを最優先で大きく・濃いパネルで見やすく
+// むーちゃん日替わり + AUD/JPY ウィジェット (Scriptable) v7.4
+// v7.4: 造園の暗記ひとことと問題は、読み込みのたびにその日の複数問からランダムで変わる
 // その日のテーマ背景の上に、むーちゃんを大きく合成（透過つきポーズ）し、
 // さらに手前にレートとグラフを重ねる。読み込みごとにポーズがランダムに変わる。
 // v7: 右上に今日の天気（Open-Meteo、佐賀固定）、下部に造園1級の暗記ひとことを表示。
@@ -95,11 +95,16 @@ async function fetchWeather() {
   };
 }
 
-// 造園データは日付が当日のものだけ有効とする
+// 造園データは日付が当日のものだけ有効とする。
+// zouen.json の items（その日の複数問）から、読み込みのたびにランダムで1問選ぶ。
+// 旧形式（単一の question を直接持つ形）も1問として扱う。
 async function fetchZouen() {
   const z = await fetchJSONFile("zouen.json");
-  if (!z || z.date !== todayISO() || !z.question) return null;
-  return z;
+  if (!z || z.date !== todayISO()) return null;
+  const items = Array.isArray(z.items) && z.items.length ? z.items : (z.question ? [z] : []);
+  const valid = items.filter((it) => it && it.question);
+  if (!valid.length) return null;
+  return valid[Math.floor(Math.random() * valid.length)];
 }
 
 // ctx の rect 内にチャートを描く
